@@ -6,6 +6,8 @@ interface MarkdownToHTMLSettings {
     removeEmphasis: boolean;
     removeTags: boolean;
     removeComments: boolean;
+    /**If extended markdown syntax plugin should be supported */
+    extendedSupport: boolean;
     /**If result should be wrapped in a div*/
     wrapResult: boolean;
     /**Snippets to inline*/
@@ -17,6 +19,7 @@ interface MarkdownToHTMLSettings {
     removeBrackets: true,
     removeEmphasis: false,
     removeTags: false,
+    extendedSupport: false,
     removeComments: false,
     wrapResult:true,
     snippets:[]
@@ -41,9 +44,38 @@ export default class MarkdownToHTML extends Plugin {
         converter.setOption('ellipsis', false);
         let text = editor.getSelection();
         // TODO: Handle highlights /==(.+?)==/g
-        text = text.replace(/==/g, ''); //removing highlighted text emphasis (showdown doesn't handle it)
+        converter.addExtension({ //Highlights 
+              type: 'output',
+              regex: /\=\=(?:{.*})?(.+?)\=\=/g, 
+              replace: '<span class="highlight">$1</span>'
+        })
         // TODO: Handle custom spans
-        text = text.replace(/\^\w+/g, ''); //removing block reference ids
+        converter.addExtension({ //Highlights 
+              type: 'output',
+              regex: /\!\!({.+?})?(.+?)\!\!/g, 
+              replace: '<span class="$1">$2</span>',
+        });
+
+        if(this.settings.extendedSupport){
+            converter.addExtension({ //Superscript 
+              type: 'lang',
+              regex: /\^(.+?)\^/g, 
+              replace: '<sup>$1</sup>'
+            })
+            converter.addExtension({ //Subscript
+              type: 'lang',
+              regex: /\~(.+?)\~/g,
+              replace: '<sub>$1</sub>'
+            })
+            converter.addExtension({
+              type: 'output',
+              regex: /!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g,
+              replace: '<span class="$1">$2</span>'
+            })
+            // text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
+        }
+
+        text = text.replace(/\^\w+$/g, ''); //removing block reference ids
         if (this.settings.removeBrackets) {
             text = text.replace(/\[\[(.*?)\]\]/g, '$1');
           }
@@ -141,6 +173,26 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.removeComments)
           .onChange(async (value) => {
             this.plugin.settings.removeComments = value;
+            await this.plugin.saveSettings();
+          }));
+
+        new Setting(containerEl)
+        .setName("Support Extended Markdown Syntax")
+        .setDesc("If enabled, it will handle custom spans and other highlight colors.")
+        .addToggle(toggle => toggle
+          .setValue(this.plugin.settings.extendedSupport)
+          .onChange(async (value) => {
+            this.plugin.settings.extendedSupport = value;
+            await this.plugin.saveSettings();
+          }));
+        
+        new Setting(containerEl)
+        .setName("Wrap the output")
+        .setDesc("If enabled, it will wrap the resulting HTML in a div.")
+        .addToggle(toggle => toggle
+          .setValue(this.plugin.settings.wrapResult)
+          .onChange(async (value) => {
+            this.plugin.settings.wrapResult = value;
             await this.plugin.saveSettings();
           }));
     }
