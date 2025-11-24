@@ -6,6 +6,10 @@ interface MarkdownToHTMLSettings {
     removeEmphasis: boolean;
     removeTags: boolean;
     removeComments: boolean;
+    /**If result should be wrapped in a div*/
+    wrapResult: boolean;
+    /**Snippets to inline*/
+    snippets:[];
   }
   
 
@@ -13,7 +17,9 @@ interface MarkdownToHTMLSettings {
     removeBrackets: true,
     removeEmphasis: false,
     removeTags: false,
-    removeComments: false
+    removeComments: false,
+    wrapResult:true,
+    snippets:[]
   };
 
 export default class MarkdownToHTML extends Plugin {
@@ -34,7 +40,9 @@ export default class MarkdownToHTML extends Plugin {
         converter.setFlavor('github');
         converter.setOption('ellipsis', false);
         let text = editor.getSelection();
+        // TODO: Handle highlights /==(.+?)==/g
         text = text.replace(/==/g, ''); //removing highlighted text emphasis (showdown doesn't handle it)
+        // TODO: Handle custom spans
         text = text.replace(/\^\w+/g, ''); //removing block reference ids
         if (this.settings.removeBrackets) {
             text = text.replace(/\[\[(.*?)\]\]/g, '$1');
@@ -52,11 +60,10 @@ export default class MarkdownToHTML extends Plugin {
             text = text.replace(/%%.+%%/g, '');
           }
         const html = converter.makeHtml(text).toString();
-        const withDivWrapper = `<!-- directives:[] -->
-            <div id="content">${html}</div>`;
+        const outputHtml = this.settings.wrapResult?`<div id="content">${html}</div>`:html;
 
 		//@ts-ignore
-		const blob = new Blob([withDivWrapper], {
+		const blob = new Blob([outputHtml], {
 			//@ts-ignore
 			type: ["text/plain", "text/html"]
 		})
