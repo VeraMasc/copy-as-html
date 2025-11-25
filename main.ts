@@ -2,199 +2,208 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import * as showdown from 'showdown';
 
 interface MarkdownToHTMLSettings {
-    removeBrackets: boolean;
-    removeEmphasis: boolean;
-    removeTags: boolean;
-    removeComments: boolean;
-    /**If extended markdown syntax plugin should be supported */
-    extendedSupport: boolean;
-    /**If result should be wrapped in a div*/
-    wrapResult: boolean;
-    /**Snippets to inline*/
-    snippets:[];
-  }
-  
+	removeBrackets: boolean;
+	removeEmphasis: boolean;
+	removeTags: boolean;
+	removeComments: boolean;
+	/**If extended markdown syntax plugin should be supported */
+	extendedSupport: boolean;
+	/**If result should be wrapped in a div*/
+	wrapResult: boolean;
+	/**Snippets to inline*/
+	snippets: [];
+}
 
-  const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
-    removeBrackets: true,
-    removeEmphasis: false,
-    removeTags: false,
-    extendedSupport: false,
-    removeComments: false,
-    wrapResult:true,
-    snippets:[]
-  };
+
+const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
+	removeBrackets: true,
+	removeEmphasis: false,
+	removeTags: false,
+	extendedSupport: false,
+	removeComments: false,
+	wrapResult: true,
+	snippets: []
+};
 
 export default class MarkdownToHTML extends Plugin {
-    settings: MarkdownToHTMLSettings;
+	settings: MarkdownToHTMLSettings;
 
-    async onload() {
-        await this.loadSettings();
-        this.addCommand({
-            id: 'copy-as-html-command',
-            name: 'Copy as HTML command',
-            editorCallback: (editor: any) => this.markdownToHTML(editor)
-        });
-        this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
-    }
+	async onload() {
+		await this.loadSettings();
+		this.addCommand({
+			id: 'copy-as-html-command',
+			name: 'Copy as HTML command',
+			editorCallback: (editor: any) => this.markdownToHTML(editor)
+		});
+		this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
+	}
 
-    markdownToHTML(editor: Editor) {
-        const converter = new showdown.Converter();
-        converter.setFlavor('github');
-        converter.setOption('ellipsis', false);
-        let text = editor.getSelection();
-        // TODO: Handle highlights /==(.+?)==/g
-        converter.addExtension({ //Highlights 
-              type: 'output',
-              regex: /\=\=(?:{.*})?(.+?)\=\=/g, 
-              replace: '<span class="highlight">$1</span>'
-        })
-        // TODO: Handle custom spans
-        converter.addExtension({ //Highlights 
-              type: 'output',
-              regex: /\!\!({.+?})?(.+?)\!\!/g, 
-              replace: '<span class="$1">$2</span>',
-        });
+	markdownToHTML(editor: Editor) {
+		const converter = new showdown.Converter();
+		converter.setFlavor('github');
+		converter.setOption('ellipsis', false);
+		let text = editor.getSelection();
 
-        if(this.settings.extendedSupport){
-            converter.addExtension({ //Superscript 
-              type: 'lang',
-              regex: /\^(.+?)\^/g, 
-              replace: '<sup>$1</sup>'
-            })
-            converter.addExtension({ //Subscript
-              type: 'lang',
-              regex: /\~(.+?)\~/g,
-              replace: '<sub>$1</sub>'
-            })
-            converter.addExtension({
-              type: 'output',
-              regex: /!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g,
-              replace: '<span class="$1">$2</span>'
-            })
-            // text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
-        }
+		try{
+			this.createExtension();
+			converter.useExtension("extended-tags")
 
-        text = text.replace(/\^\w+$/g, ''); //removing block reference ids
-        if (this.settings.removeBrackets) {
-            text = text.replace(/\[\[(.*?)\]\]/g, '$1');
-          }
-          
-        if (this.settings.removeEmphasis) {
-            text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
-          }
-          
-        if (this.settings.removeTags) {
-            text = text.replace(/#\w+/g, '');
-          }
+			text = text.replace(/\^\w+$/g, ''); //removing block reference ids
+			if (this.settings.removeBrackets) {
+				text = text.replace(/\[\[(.*?)\]\]/g, '$1');
+			}
 
-        if (this.settings.removeComments) {
-            text = text.replace(/%%.+%%/g, '');
-          }
-        const html = converter.makeHtml(text).toString();
-        const outputHtml = this.settings.wrapResult?`<div id="content">${html}</div>`:html;
+			if (this.settings.removeEmphasis) {
+				text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
+			}
 
-		//@ts-ignore
-		const blob = new Blob([outputHtml], {
+			if (this.settings.removeTags) {
+				text = text.replace(/#\w+/g, '');
+			}
+
+			if (this.settings.removeComments) {
+				text = text.replace(/%%.+%%/g, '');
+			}
+			const html = converter.makeHtml(text).toString();
+			const outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
+
 			//@ts-ignore
-			type: ["text/plain", "text/html"]
-		})
-		const data = [new ClipboardItem({
+			const blob = new Blob([outputHtml], {
+				//@ts-ignore
+				type: ["text/plain", "text/html"]
+			})
+			const data = [new ClipboardItem({
+				//@ts-ignore
+				["text/plain"]: blob,
+				//@ts-ignore
+				["text/html"]: blob
+			})];
 			//@ts-ignore
-			["text/plain"]: blob,
-			//@ts-ignore
-			["text/html"]: blob
-		})];
-		//@ts-ignore
-		navigator.clipboard.write(data);
-			
-			  
-    }
+			navigator.clipboard.write(data);
+		}catch(err){
+			new Notice("Failed to copy as HTML:\n"+err,null)
+			throw err;
+		}
 
-    async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    }
+	}
 
-    async saveSettings() {
-        await this.saveData(this.settings);
-    }
+	/**Creates the listener extension needed to handle tags without breaking codeblocks */
+	private createExtension() {
+		// TODO: Test weird edge cases
+		let settings = this.settings;
+		showdown.extension('extended-tags', function () {
+			var myext = {
+				type: 'listener',
+				listeners: {
+					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
 
-    onunload() {
-        // ...
-    }
+						if (settings.extendedSupport) {
+							//Superscript 
+							text = text.replace(/\^(.+?)\^/g, '<sup>$1</sup>');
+							//Subscript
+							text = text.replace(/\~(.+?)\~/g, '<sub>$1</sub>');
+							//Highlights
+							text = text.replace(/\=\=(?:{.*})?(.+?)\=\=/g, '<span class="hilight">$1</span>');
+							// TODO: Add highlight color
+							//Custom spans
+							text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
+							// TODO: add spoilers and other stuff
+							// TODO: Allow custom tags? 
+						}
+						return text;
+					}
+				}
+			};
+			return [myext];
+		});
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
+	onunload() {
+		// ...
+	}
 }
 
 class MarkdownToHTMLSettingTab extends PluginSettingTab {
-    plugin: MarkdownToHTML;
-  
-    constructor(app: App, plugin: MarkdownToHTML) {
-      super(app, plugin);
-      this.plugin = plugin;
-    }
-  
-    display(): void {
-      let { containerEl } = this;
-      containerEl.empty();
-  
-      new Setting(containerEl)
-        .setName("Remove Wikilink brackets")
-        .setDesc("If enabled, removes wikilink brackets from copied text.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.removeBrackets)
-          .onChange(async (value) => {
-            this.plugin.settings.removeBrackets = value;
-            await this.plugin.saveSettings();
-          }));
-  
-      new Setting(containerEl)
-        .setName("Remove text emphasis")
-        .setDesc("If enabled, removes text styling such as bold, italics, and highlights.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.removeEmphasis)
-          .onChange(async (value) => {
-            this.plugin.settings.removeEmphasis = value;
-            await this.plugin.saveSettings();
-          }));
-  
-      new Setting(containerEl)
-        .setName("Remove hashtags")
-        .setDesc("If enabled, removes text immediately after a hashtag.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.removeTags)
-          .onChange(async (value) => {
-            this.plugin.settings.removeTags = value;
-            await this.plugin.saveSettings();
-          }));
+	plugin: MarkdownToHTML;
 
-        new Setting(containerEl)
-        .setName("Remove comments")
-        .setDesc("If enabled, removes commented text.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.removeComments)
-          .onChange(async (value) => {
-            this.plugin.settings.removeComments = value;
-            await this.plugin.saveSettings();
-          }));
+	constructor(app: App, plugin: MarkdownToHTML) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
 
-        new Setting(containerEl)
-        .setName("Support Extended Markdown Syntax")
-        .setDesc("If enabled, it will handle custom spans and other highlight colors.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.extendedSupport)
-          .onChange(async (value) => {
-            this.plugin.settings.extendedSupport = value;
-            await this.plugin.saveSettings();
-          }));
-        
-        new Setting(containerEl)
-        .setName("Wrap the output")
-        .setDesc("If enabled, it will wrap the resulting HTML in a div.")
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.wrapResult)
-          .onChange(async (value) => {
-            this.plugin.settings.wrapResult = value;
-            await this.plugin.saveSettings();
-          }));
-    }
-  }
-  
+	display(): void {
+		let { containerEl } = this;
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName("Remove Wikilink brackets")
+			.setDesc("If enabled, removes wikilink brackets from copied text.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.removeBrackets)
+				.onChange(async (value) => {
+					this.plugin.settings.removeBrackets = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Remove text emphasis")
+			.setDesc("If enabled, removes text styling such as bold, italics, and highlights.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.removeEmphasis)
+				.onChange(async (value) => {
+					this.plugin.settings.removeEmphasis = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Remove hashtags")
+			.setDesc("If enabled, removes text immediately after a hashtag.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.removeTags)
+				.onChange(async (value) => {
+					this.plugin.settings.removeTags = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Remove comments")
+			.setDesc("If enabled, removes commented text.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.removeComments)
+				.onChange(async (value) => {
+					this.plugin.settings.removeComments = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Support Extended Markdown Syntax")
+			.setDesc("If enabled, it will handle custom spans and other highlight colors.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.extendedSupport)
+				.onChange(async (value) => {
+					this.plugin.settings.extendedSupport = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Wrap the output")
+			.setDesc("If enabled, it will wrap the resulting HTML in a div.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.wrapResult)
+				.onChange(async (value) => {
+					this.plugin.settings.wrapResult = value;
+					await this.plugin.saveSettings();
+				}));
+
+				// TODO: add all settings
+	}
+}
+
