@@ -6,6 +6,8 @@ interface MarkdownToHTMLSettings {
 	removeEmphasis: boolean;
 	removeTags: boolean;
 	removeComments: boolean;
+	/**If obsidian markdown syntax plugin should be supported */
+	obsidianSupport: boolean;
 	/**If extended markdown syntax plugin should be supported */
 	extendedSupport: boolean;
 	/**If result should be wrapped in a div*/
@@ -19,8 +21,9 @@ const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
 	removeBrackets: true,
 	removeEmphasis: false,
 	removeTags: false,
+	obsidianSupport: true,
 	extendedSupport: false,
-	removeComments: false,
+	removeComments: true,
 	wrapResult: true,
 	snippets: []
 };
@@ -48,21 +51,8 @@ export default class MarkdownToHTML extends Plugin {
 			this.createExtension();
 			converter.useExtension("extended-tags")
 
-			text = text.replace(/\^\w+$/g, ''); //removing block reference ids
-			if (this.settings.removeBrackets) {
-				text = text.replace(/\[\[(.*?)\]\]/g, '$1');
-			}
-
-			if (this.settings.removeEmphasis) {
-				text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
-			}
-
-			if (this.settings.removeTags) {
-				text = text.replace(/#\w+/g, '');
-			}
-
 			if (this.settings.removeComments) {
-				text = text.replace(/%%.+%%/g, '');
+				text = text.replace(/%%.+?%%/gs, '');
 			}
 			const html = converter.makeHtml(text).toString();
 			const outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
@@ -95,20 +85,39 @@ export default class MarkdownToHTML extends Plugin {
 			var myext = {
 				type: 'listener',
 				listeners: {
+					'italicsAndBold.before':function (event: any, text: any, converter: any, options: any, globals: any) {
+						//Cleanup
+						text = text.replace(/\^\w+$/g, ''); //removing block reference ids
+						if( settings.removeTags || settings.obsidianSupport)
+							text = text.replace(/(#\w+)/g, settings.removeTags?'':'<span class="tag">$1</span>');
+						if (settings.removeEmphasis) {
+							text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
+						}
+						if (settings.removeBrackets) {
+							text = text.replace(/\[\[(.*?)\]\]/g, '$1');
+						}
+						return text;
+					},
 					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
-
+						//Obsidian
+						if(settings.obsidianSupport){
+							//Highlights
+							text = text.replace(/\=\=(?:{.*})?(.+?)\=\=/g, '<span class="hilight">$1</span>');
+							// TODO: Add highlight color
+						}
+						//Extended
 						if (settings.extendedSupport) {
+							
 							//Superscript 
 							text = text.replace(/\^(.+?)\^/g, '<sup>$1</sup>');
 							//Subscript
 							text = text.replace(/\~(.+?)\~/g, '<sub>$1</sub>');
-							//Highlights
-							text = text.replace(/\=\=(?:{.*})?(.+?)\=\=/g, '<span class="hilight">$1</span>');
-							// TODO: Add highlight color
+							
+							
 							//Custom spans
 							text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
 							// TODO: add spoilers and other stuff
-							// TODO: Allow custom tags? 
+							// TODO: Allow custom tag delimiters? 
 						}
 						return text;
 					}
@@ -182,7 +191,15 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 					this.plugin.settings.removeComments = value;
 					await this.plugin.saveSettings();
 				}));
-
+		new Setting(containerEl)
+			.setName("Support Obsidian Markdown Syntax")
+			.setDesc("If enabled, it will handle highlights, tags and other obsidian specific elements.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.extendedSupport)
+				.onChange(async (value) => {
+					this.plugin.settings.extendedSupport = value;
+					await this.plugin.saveSettings();
+				}));
 		new Setting(containerEl)
 			.setName("Support Extended Markdown Syntax")
 			.setDesc("If enabled, it will handle custom spans and other highlight colors.")
