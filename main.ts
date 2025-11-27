@@ -13,7 +13,7 @@ interface MarkdownToHTMLSettings {
 	/**If result should be wrapped in a div*/
 	wrapResult: boolean;
 	/**Snippets to inline*/
-	snippets: [];
+	snippets: string[];
 }
 
 
@@ -41,7 +41,7 @@ export default class MarkdownToHTML extends Plugin {
 		this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
 	}
 
-	markdownToHTML(editor: Editor) {
+	async markdownToHTML(editor: Editor) {
 		const converter = new showdown.Converter();
 		converter.setFlavor('github');
 		converter.setOption('ellipsis', false);
@@ -56,7 +56,11 @@ export default class MarkdownToHTML extends Plugin {
 			}
 			const html = converter.makeHtml(text).toString();
 			const outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
-
+			const div = createDiv();
+			div.innerHTML=outputHtml;
+			console.log(div);
+			await this.inlineStyles(div);
+			console.log(div);
 			//@ts-ignore
 			const blob = new Blob([outputHtml], {
 				//@ts-ignore
@@ -75,6 +79,17 @@ export default class MarkdownToHTML extends Plugin {
 			throw err;
 		}
 
+	}
+
+	/**Inlines the chosen styles */
+	private async inlineStyles(div:HTMLDivElement){
+		const doc = document.implementation.createHTMLDocument("");
+		for(let snippet of this.settings.snippets){
+			let style = createEl('style');
+			style.textContent = await this.app.vault.adapter.read((this.app as any).customCss.getSnippetPath(snippet))
+			doc.body.append(style);
+			console.log(style.sheet);
+		}
 	}
 
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
@@ -221,6 +236,27 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 				}));
 
 				// TODO: add all settings
+		new Setting(containerEl)
+			.setName("Snippets")
+			.setHeading()
+			// TODO: add snippets
+		let activeSnippets = this.plugin.settings.snippets
+		for(let snippet of (this.app as any).customCss.snippets){
+			new Setting(containerEl)
+			.setName(snippet)
+			.addToggle(toggle => toggle
+				.setValue(activeSnippets.contains(snippet))
+				.onChange(async (value) => {
+					if(value){
+						if(!activeSnippets.contains(snippet))
+							activeSnippets.push(snippet)
+					}else{
+						activeSnippets.remove(snippet)
+					}
+					await this.plugin.saveSettings();
+				}));
+		}
+		
 	}
 }
 
