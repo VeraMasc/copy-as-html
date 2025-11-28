@@ -106,15 +106,17 @@ export default class MarkdownToHTML extends Plugin {
 				//
 				}
 				for (const rule of Object.values(cssRules) as CSSStyleRule[]){
-					// let classNames= Array.from(rule.selectorText.matchAll(/((?:\.[\w\-_]+)+)(?:\[.*?\])?(?:($)|,)/gm))
-					// 	.flatMap(cn => Array.from(cn[1].matchAll(/(?<=\.)[\w\-_]+/g)).map(r => r[0]))
+					let classNames= this.settings.removeInlined?
+						Array.from(rule.selectorText.matchAll(/((?:\.[\w\-_]+)+)(?:\[.*?\])?(?:($)|,)/gm))
+							.flatMap(cn => Array.from(cn[1].matchAll(/(?<=\.)[\w\-_]+/g)).map(r => r[0]))
+							:[];
 						
 					for (const element of elements as HTMLElement[]){
 						if (!element.matches(rule.selectorText))
 							continue;
-						// element.removeClasses(classNames);
-						// if(element.className=="")
-						// 	element.removeAttribute('class');
+						element.removeClasses(classNames);
+						if(element.className=="")
+							element.removeAttribute('class');
 						for (const prop of rule.style)
 							element.style.setProperty(
 							prop,
@@ -286,6 +288,9 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		this.addToggle(containerEl,"removeInlined","Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
+		
+
 				// TODO: add all settings
 		new Setting(containerEl)
 			.setName("Snippets")
@@ -308,6 +313,21 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 				}));
 		}
 		
+		
+	}
+
+
+	private addToggle(el:HTMLElement,prop:SettingProps,name:string,descr:string){
+		new Setting(el)
+			.setName(name)
+			.setDesc(descr)
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings[prop])
+				.onChange(async (value) => {
+					this.plugin.settings[prop] = value;
+					await this.plugin.saveSettings();
+				}));
 	}
 }
 
+type SettingProps= keyof { [ P in keyof MarkdownToHTMLSettings as MarkdownToHTMLSettings[P] extends boolean ? P : never ] : P } 
