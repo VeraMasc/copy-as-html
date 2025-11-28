@@ -14,6 +14,8 @@ interface MarkdownToHTMLSettings {
 	wrapResult: boolean;
 	/**Snippets to inline*/
 	snippets: string[];
+	/**If classes with inlined style should be removed*/
+	removeInlined: boolean;
 }
 
 
@@ -25,7 +27,8 @@ const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
 	extendedSupport: false,
 	removeComments: true,
 	wrapResult: true,
-	snippets: []
+	snippets: [],
+	removeInlined: false,
 };
 
 export default class MarkdownToHTML extends Plugin {
@@ -46,7 +49,7 @@ export default class MarkdownToHTML extends Plugin {
 		converter.setFlavor('github');
 		converter.setOption('ellipsis', false);
 		let text = editor.getSelection();
-
+		const div = createDiv();
 		try{
 			this.createExtension();
 			converter.useExtension("extended-tags")
@@ -55,12 +58,16 @@ export default class MarkdownToHTML extends Plugin {
 				text = text.replace(/%%.+?%%/gs, '');
 			}
 			const html = converter.makeHtml(text).toString();
-			const outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
-			const div = createDiv();
+			let outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
+			// TODO: Refactor
+			div.style.maxHeight='0';
+			div.style.overflow='hidden';
 			div.innerHTML=outputHtml;
-			console.log(div);
+			
 			await this.inlineStyles(div);
+			// TODO: Remove classes
 			console.log(div);
+			outputHtml = div.innerHTML;
 			//@ts-ignore
 			const blob = new Blob([outputHtml], {
 				//@ts-ignore
@@ -74,22 +81,66 @@ export default class MarkdownToHTML extends Plugin {
 			})];
 			//@ts-ignore
 			navigator.clipboard.write(data);
+			div.detach()
 		}catch(err){
 			new Notice("Failed to copy as HTML:\n"+err,null)
+			div?.detach()
 			throw err;
 		}
 
 	}
 
+
+		/**
+		 * https://stackoverflow.com/questions/62292885/convert-css-styles-to-inline-styles-with-javascript-keeping-the-style-units 
+		 * */
+		applyInline(element:HTMLElement, styles:CSSStyleSheet[]|StyleSheetList) {
+			const elements = [element, ...element.querySelectorAll("*")];
+			const elementRules = document.createElement(element.tagName).style;
+			elementRules.cssText = element.style.cssText;
+			for (const sheet of styles) {
+				let cssRules = {} as CSSRuleList;
+				try {
+				cssRules = sheet.cssRules;
+				} catch (error) {
+				//
+				}
+				for (const rule of Object.values(cssRules) as CSSStyleRule[]){
+					// let classNames= Array.from(rule.selectorText.matchAll(/((?:\.[\w\-_]+)+)(?:\[.*?\])?(?:($)|,)/gm))
+					// 	.flatMap(cn => Array.from(cn[1].matchAll(/(?<=\.)[\w\-_]+/g)).map(r => r[0]))
+						
+					for (const element of elements as HTMLElement[]){
+						if (!element.matches(rule.selectorText))
+							continue;
+						// element.removeClasses(classNames);
+						// if(element.className=="")
+						// 	element.removeAttribute('class');
+						for (const prop of rule.style)
+							element.style.setProperty(
+							prop,
+							elementRules.getPropertyValue(prop) ||
+								rule.style.getPropertyValue(prop),
+							rule.style.getPropertyPriority(prop)
+							);
+					}
+				}
+			}
+		}
+
+
+	
 	/**Inlines the chosen styles */
 	private async inlineStyles(div:HTMLDivElement){
 		const doc = document.implementation.createHTMLDocument("");
-		for(let snippet of this.settings.snippets){
+		doc.body.append(div);
+		let styles:CSSStyleSheet[] = await Promise.all(this.settings.snippets.map(async (snippet)=>
+		{
 			let style = createEl('style');
 			style.textContent = await this.app.vault.adapter.read((this.app as any).customCss.getSnippetPath(snippet))
-			doc.body.append(style);
-			console.log(style.sheet);
-		}
+			doc.head.append(style);
+			return style.sheet;
+		}))
+		this.applyInline(div, styles);
 	}
 
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
