@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import * as showdown from 'showdown';
+import {Converter,extension} from 'showdown';
 
 interface MarkdownToHTMLSettings {
 	removeBrackets: boolean;
@@ -45,7 +45,7 @@ export default class MarkdownToHTML extends Plugin {
 	}
 
 	async markdownToHTML(editor: Editor) {
-		const converter = new showdown.Converter();
+		const converter = new Converter();
 		converter.setFlavor('github');
 		converter.setOption('ellipsis', false);
 		let text = editor.getSelection();
@@ -66,7 +66,6 @@ export default class MarkdownToHTML extends Plugin {
 			
 			await this.inlineStyles(div);
 			// TODO: Remove classes
-			console.log(div);
 			outputHtml = div.innerHTML;
 			//@ts-ignore
 			const blob = new Blob([outputHtml], {
@@ -149,7 +148,7 @@ export default class MarkdownToHTML extends Plugin {
 	private createExtension() {
 		// TODO: Test weird edge cases
 		let settings = this.settings;
-		showdown.extension('extended-tags', function () {
+		extension('extended-tags', function () {
 			var myext = {
 				type: 'listener',
 				listeners: {
@@ -220,74 +219,13 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		let { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName("Remove Wikilink brackets")
-			.setDesc("If enabled, removes wikilink brackets from copied text.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.removeBrackets)
-				.onChange(async (value) => {
-					this.plugin.settings.removeBrackets = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName("Remove text emphasis")
-			.setDesc("If enabled, removes text styling such as bold, italics, and highlights.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.removeEmphasis)
-				.onChange(async (value) => {
-					this.plugin.settings.removeEmphasis = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName("Remove hashtags")
-			.setDesc("If enabled, removes text immediately after a hashtag.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.removeTags)
-				.onChange(async (value) => {
-					this.plugin.settings.removeTags = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName("Remove comments")
-			.setDesc("If enabled, removes commented text.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.removeComments)
-				.onChange(async (value) => {
-					this.plugin.settings.removeComments = value;
-					await this.plugin.saveSettings();
-				}));
-		new Setting(containerEl)
-			.setName("Support Obsidian Markdown Syntax")
-			.setDesc("If enabled, it will handle highlights, tags and other obsidian specific elements.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.extendedSupport)
-				.onChange(async (value) => {
-					this.plugin.settings.extendedSupport = value;
-					await this.plugin.saveSettings();
-				}));
-		new Setting(containerEl)
-			.setName("Support Extended Markdown Syntax")
-			.setDesc("If enabled, it will handle custom spans and other highlight colors.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.extendedSupport)
-				.onChange(async (value) => {
-					this.plugin.settings.extendedSupport = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName("Wrap the output")
-			.setDesc("If enabled, it will wrap the resulting HTML in a div.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.wrapResult)
-				.onChange(async (value) => {
-					this.plugin.settings.wrapResult = value;
-					await this.plugin.saveSettings();
-				}));
-
+		this.addToggle(containerEl,'removeBrackets', "Remove Wikilink brackets", "If enabled, removes wikilink brackets from copied text.")
+		this.addToggle(containerEl,'removeEmphasis', "Remove text emphasis","If enabled, removes text styling such as bold, italics, and highlights.")
+		this.addToggle(containerEl,'removeTags', "Remove hashtags", "If enabled, removes text immediately after a hashtag.")
+		this.addToggle(containerEl,'removeComments',"Remove comments","If enabled, removes commented text.")
+		this.addToggle(containerEl,'obsidianSupport',"Support Obsidian Markdown Syntax","If enabled, it will handle highlights, tags and other obsidian specific elements.")
+		this.addToggle(containerEl,'extendedSupport',"Support Extended Markdown Syntax","If enabled, it will handle custom spans and other highlight colors.")
+		this.addToggle(containerEl,'wrapResult',"Wrap the output","If enabled, it will wrap the resulting HTML in a div.")
 		this.addToggle(containerEl,"removeInlined","Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
 		
 

@@ -46,7 +46,10 @@ esbuild.build({
 	watch: !prod,
 	target: 'es2016',
 	logLevel: "info",
-	sourcemap: prod ? false : 'inline',
+	minify:true,
+	minifyWhitespace:true,
+	minifySyntax:true,
+	sourcemap:  true,
 	treeShaking: true,
 	outfile: 'main.js',
 }).catch(() => process.exit(1));
