@@ -43,11 +43,13 @@ export default class MarkdownToHTML extends Plugin {
 		this.addCommand({
 			id: 'copy-as-html-command',
 			name: 'Copy as HTML command',
+			icon:'code-xml',
 			editorCallback: (editor: any) => this.markdownToHTML(editor)
 		});
 		this.addCommand({
 			id: 'copy-as-img-command',
 			name: 'Copy as img command',
+			icon: "image-plus",
 			editorCallback: (editor: any) => this.markdownToPNG(editor)
 		});
 
