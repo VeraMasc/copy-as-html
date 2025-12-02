@@ -175,6 +175,7 @@ async markdownToPNG(editor: Editor) {
 
 	async nodeToImage(node:HTMLElement){
 		try{
+			node.style.maxWidth="60vw"
 			console.log(node);
 			
 		
@@ -184,9 +185,8 @@ async markdownToPNG(editor: Editor) {
 					//@ts-ignore
 					debug:true,
 					onclone:(n)=>console.log(n),
-					bgColor:"rgb(30,30,30)", // TODO: Extract from css
-					height: node.clientHeight, // TODO: Increase quality
-					width: node.clientWidth,
+					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
+					
 					scale:3,
 
 				} as any);
@@ -201,6 +201,7 @@ async markdownToPNG(editor: Editor) {
 				navigator.clipboard.write(data);
 			new Notice("Exported to png")
 		}catch(err){
+			new Notice("Failed to convert to image: "+err)
 			throw err
 		}
 	}
@@ -242,8 +243,10 @@ async markdownToPNG(editor: Editor) {
 					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
 						//Obsidian
 						if (settings.obsidianSupport) {
+							//Custom highlight
+							text = text.replace(/\=\=(?:{(.*)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
 							//Highlights
-							text = text.replace(/\=\=(?:{.*})?(.+?)\=\=/g, '<span class="hilight">$1</span>');
+							text = text.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>');
 							// TODO: Add highlight color
 						}
 						//Extended
