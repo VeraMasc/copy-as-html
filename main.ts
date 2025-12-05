@@ -20,6 +20,12 @@ interface MarkdownToHTMLSettings {
 	snippets: string[];
 	/**If classes with inlined style should be removed*/
 	removeInlined: boolean;
+	/**Maximum width of the html container when rendering as png */
+	renderMaxwidth:string;
+	/**Enables selector filtering*/
+	useFilter: boolean;
+	/**Annotation selector*/
+	filterSelector:string;
 }
 
 
@@ -33,6 +39,9 @@ const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
 	wrapResult: true,
 	snippets: [],
 	removeInlined: false,
+	renderMaxwidth:"60vw",
+	useFilter:false,
+	filterSelector:"",
 };
 
 export default class MarkdownToHTML extends Plugin {
@@ -75,7 +84,8 @@ export default class MarkdownToHTML extends Plugin {
 			div.style.maxHeight = '0';
 			div.style.overflow = 'hidden';
 			div.innerHTML = outputHtml;
-
+			if(this.settings.useFilter)
+				this.filterHTML(this.settings.filterSelector, div)
 			await this.inlineStyles(div);
 			// TODO: Remove classes
 			outputHtml = div.innerHTML;
@@ -107,6 +117,7 @@ async markdownToPNG(editor: Editor) {
 		converter.setOption('ellipsis', false);
 		let text = editor.getSelection();
 		const div = createDiv();
+		let popup = new Notice("Generating Image", null);
 		try {
 			this.createExtension();
 			converter.useExtension("extended-tags")
@@ -114,19 +125,21 @@ async markdownToPNG(editor: Editor) {
 			if (this.settings.removeComments) {
 				text = text.replace(/%%.+?%%/gs, '');
 			}
-			const html = converter.makeHtml(text).toString();
+			const html = converter.makeHtml(text);
 			let outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
 			// TODO: Refactor
 			// div.style.maxHeight = '0';
 			// div.style.overflow = 'hidden';
 			div.innerHTML = outputHtml;
-
-			await this.inlineStyles(div);
-			// TODO: Fix div not being rendered
+			if(this.settings.useFilter)
+				this.filterHTML(this.settings.filterSelector, div)
+			// await this.inlineStyles(div);
 			document.body.append(div)
 			await this.nodeToImage(div)
+			popup.hide();
 			div.detach()
 		} catch (err) {
+			popup.hide();
 			new Notice("Failed to copy as IMG:\n" + err, null)
 			div?.detach()
 			throw err;
@@ -177,24 +190,20 @@ async markdownToPNG(editor: Editor) {
 
 	async nodeToImage(node:HTMLElement){
 		try{
-			node.style.maxWidth="60vw"
-			console.log(node);
+			node.style.maxWidth= this.settings.renderMaxwidth;
+			node.style.padding= "2em";
 			
 		
 			
 			const blob = await domtoimage.toBlob(node,
 				{
 					//@ts-ignore
-					debug:true,
-					onclone:(n)=>console.log(n),
 					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
 					
-					scale:3,
+					scale:2,
 
 				} as any);
 			
-			
-			console.log(blob);
 			const data = [new ClipboardItem({
 				
 					[blob.type]: blob,
@@ -221,9 +230,19 @@ async markdownToPNG(editor: Editor) {
 		this.applyInline(div, styles);
 	}
 
+	private filterHTML(selector:string, root:HTMLElement){
+		try{
+			let toRemove = root.querySelectorAll(selector);
+			for(let el of toRemove){
+				el.detach();
+			}
+		}catch{
+			new Notice("Error in filtering")
+		}
+	}
+
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
 	private createExtension() {
-		// TODO: Test weird edge cases
 		let settings = this.settings;
 		extension('extended-tags', function () {
 			var myext = {
@@ -306,16 +325,24 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		this.addToggle(containerEl, 'extendedSupport', "Support Extended Markdown Syntax", "If enabled, it will handle custom spans and other highlight colors.")
 		this.addToggle(containerEl, 'wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
 		this.addToggle(containerEl, "removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
+		this.addTextField(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")
+		this.addToggle(containerEl, 'useFilter', "Activates selector filtering", "Allows to 'filter' the generated html to remove elements")
+		this.addTextAreaField(containerEl, "filterSelector", "Filter selector", "Query to use to determine which HTML elements should be removed from the output")
+		// TODO: Add validation
 
 
-		// TODO: add all settings
-		new Setting(containerEl)
+		
+		
+		// Display snippets
+		// TODO: rework snippets
+		let desc = containerEl.createEl('details')
+		let summary = desc.createEl('summary')
+		new Setting(summary)
 			.setName("Snippets")
 			.setHeading()
-		// TODO: add snippets
 		let activeSnippets = this.plugin.settings.snippets
 		for (let snippet of (this.app as any).customCss.snippets) {
-			new Setting(containerEl)
+			new Setting(desc)
 				.setName(snippet)
 				.addToggle(toggle => toggle
 					.setValue(activeSnippets.contains(snippet))
@@ -345,6 +372,31 @@ class MarkdownToHTMLSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 	}
+
+	private addTextField(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
+		new Setting(el)
+			.setName(name)
+			.setDesc(descr)
+			.addText(text => text
+				.setValue(this.plugin.settings[prop])
+				.onChange(async (value) => {
+					this.plugin.settings[prop] = value;
+					await this.plugin.saveSettings();
+				}));
+	}
+
+	private addTextAreaField(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
+		new Setting(el)
+			.setName(name)
+			.setDesc(descr)
+			.addTextArea(text => text
+				.setValue(this.plugin.settings[prop])
+				.onChange(async (value) => {
+					this.plugin.settings[prop] = value;
+					await this.plugin.saveSettings();
+				}));
+	}
 }
 
-type SettingProps = keyof { [P in keyof MarkdownToHTMLSettings as MarkdownToHTMLSettings[P] extends boolean ? P : never]: P } 
+type SettingProps = keyof { [P in keyof MarkdownToHTMLSettings as MarkdownToHTMLSettings[P] extends boolean ? P : never]: P }
+type SettingTextFields = keyof { [P in keyof MarkdownToHTMLSettings as MarkdownToHTMLSettings[P] extends string ? P : never]: P } 
