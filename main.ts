@@ -230,7 +230,7 @@ async markdownToPNG(editor: Editor) {
 						//Obsidian
 						if (settings.obsidianSupport) {
 							//Custom highlight
-							text = text.replace(/\=\=(?:{(.*)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
+							text = text.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
 							//Highlights
 							text = text.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>');
 							// TODO: Add highlight color
