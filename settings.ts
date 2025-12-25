@@ -11,6 +11,8 @@ export interface MarkdownToHTMLSettings {
     obsidianSupport: boolean;
     /**If extended markdown syntax plugin should be supported */
     extendedSupport: boolean;
+	/**If experimental features should be enabled*/
+    experimental: boolean;
     /**If result should be wrapped in a div*/
     wrapResult: boolean;
     /**Snippets to inline*/
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
     removeTags: false,
     obsidianSupport: true,
     extendedSupport: false,
+	experimental:false,
     removeComments: true,
     wrapResult: true,
     snippets: [],
@@ -64,6 +67,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		this.addToggle(containerEl, 'removeComments', "Remove comments", "If enabled, removes commented text.")
 		this.addToggle(containerEl, 'obsidianSupport', "Support Obsidian Markdown Syntax", "If enabled, it will handle highlights, tags and other obsidian specific elements.")
 		this.addToggle(containerEl, 'extendedSupport', "Support Extended Markdown Syntax", "If enabled, it will handle custom spans and other highlight colors.")
+		this.addToggle(containerEl, 'experimental', "Enable experimental features", "Mostly for testing, enables unreliable features that might not be production ready")
 		this.addToggle(containerEl, 'wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
 		this.addToggle(containerEl, "removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
 		this.addTextField(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")

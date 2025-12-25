@@ -1,6 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
-import { Converter, extension } from 'showdown';
-// import { domToPng, domToBlob, domToCanvas } from 'modern-screenshot'
+import { Converter, extension, subParser } from 'showdown';
 import {type DomToImage} from "dom-to-image"
 
 import dti  from 'dom-to-image-more'
@@ -164,7 +163,6 @@ async markdownToPNG(editor: Editor) {
 				{
 					//@ts-ignore
 					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
-					
 					scale:this.settings.renderScale,
 
 				} as any);
@@ -233,7 +231,7 @@ async markdownToPNG(editor: Editor) {
 							text = text.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
 							//Highlights
 							text = text.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>');
-							// TODO: Add highlight color
+							
 						}
 						//Extended
 						if (settings.extendedSupport) {
@@ -247,7 +245,52 @@ async markdownToPNG(editor: Editor) {
 							//Custom spans
 							text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
 							// TODO: add spoilers and other stuff
-							// TODO: Allow custom tag delimiters? 
+							// TODO: Allow custom tag delimiters?
+							// TODO: support block styling
+						}
+						return text;
+					},
+
+					// "spanGamut.before": function (event: any, text: string, converter: any, options: any, globals: any) {
+					// 	console.log(text);
+					// 	let match = text.match(/^::::*([\w\-\u0020]+)\n/m)
+						
+					// 	if(match){
+					// 		console.log({event,text,converter,options,globals})
+					// 		debugger;
+					// 		text = text.slice(match[0].length)
+					// 		// TODO: Figure this out
+					// 		text = `<span value="${match[1]}"/>${text}`
+					// 		// text = `<p class="${match[1]}">${text}</p>`
+					// 	}
+						
+					// 	return text;
+					// },
+					// "spanGamut.after": function (event: any, text: string, converter: any, options: any, globals: any) {
+					// 	// console.log(text);
+					// 	// let match = text.match(/^::::*([\w\-\u0020]+)<br \/>\n/m)
+					// 	// debugger;
+					// 	// if(match){
+					// 	// 	text = text.slice(match[0].length)
+					// 	// 	text = `<p>${text}</p>`
+					// 	// }
+						
+					// 	// return text;
+					// },
+					"paragraphs.after": function (event: any, text: string, converter: any, options: any, globals: any) {
+						if(settings.experimental){
+							// Split in basic paragraphs (warning: not all block elements will separate)
+							let paragraphs = text.split(/(?<=<\/p>)\n/gm)
+							paragraphs = paragraphs.map((str)=>{
+								let match = text.match(/^<p>::::*([\w\-\u0020]+)<br \/>\n/)
+								if(match){
+									str = str.slice(match[0].length)
+									str = `<p class="${match[1]}">`+str;
+								}
+								return str;
+							})
+							text = paragraphs.join("\n");
+							
 						}
 						return text;
 					}
