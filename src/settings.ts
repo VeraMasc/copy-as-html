@@ -1,4 +1,4 @@
-import {addCodeArea, SetFieldAsInvalid, SettingsContext} from "../.sharedModules/obsidian/SettingsUtils"
+import {addCodeArea, SetFieldAsInvalid, SettingsContext} from "../../.sharedModules/obsidian/SettingsUtils"
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
 import  MarkdownToHTML from "main";
 

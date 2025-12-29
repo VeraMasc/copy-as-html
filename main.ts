@@ -3,7 +3,8 @@ import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
 import {type DomToImage} from "dom-to-image"
 
 import dti  from 'dom-to-image-more'
-import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "settings"
+import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "src/settings"
+import {createExtension} from "src/extension"
 
 const  domtoimage:DomToImage =dti; 
 
@@ -29,14 +30,19 @@ export default class MarkdownToHTML extends Plugin {
 		this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
 	}
 
+	/**Gets the showdown converter */
+	getConverter() {
+		return new Converter({backslashEscapesHTMLTags:true, tasklists:true})
+	};
+
 	async markdownToHTML(editor: Editor) {
-		const converter = new Converter();
+		const converter = this.getConverter();
 		converter.setFlavor('github');
 		converter.setOption('ellipsis', false);
 		let text = editor.getSelection();
 		const div = createDiv();
 		try {
-			this.createExtension();
+			createExtension.call(this);
 			converter.useExtension("extended-tags")
 
 			if (this.settings.removeComments) {
@@ -76,14 +82,14 @@ export default class MarkdownToHTML extends Plugin {
 	}
 
 async markdownToPNG(editor: Editor) {
-		const converter = new Converter();
+		const converter = this.getConverter();
 		converter.setFlavor('github');
 		converter.setOption('ellipsis', false);
 		let text = editor.getSelection();
 		const div = createDiv();
 		let popup = new Notice("Generating Image", null);
 		try {
-			this.createExtension();
+			createExtension.call(this);
 			converter.useExtension("extended-tags")
 
 			if (this.settings.removeComments) {
@@ -205,84 +211,7 @@ async markdownToPNG(editor: Editor) {
 		}
 	}
 
-	/**Creates the listener extension needed to handle tags without breaking codeblocks */
-	private createExtension() {
-		let settings = this.settings;
-		extension('extended-tags', function () {
-			var myext = {
-				type: 'listener',
-				listeners: {
-					'italicsAndBold.before': function (event: any, text: any, converter: any, options: any, globals: any) {
-						//Cleanup
-						text = text.replace(/\^\w+$/g, ''); //removing block reference ids
-						if (settings.removeTags || settings.obsidianSupport)
-							text = text.replace(/(#\w+)/g, settings.removeTags ? '' : '<span class="tag">$1</span>');
-						if (settings.removeEmphasis) {
-							text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
-						}
-						if (settings.removeBrackets) {
-							text = text.replace(/\[\[(.*?)\]\]/g, '$1');
-						}
-						return text;
-					},
-					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
-						//Obsidian
-						if (settings.obsidianSupport) {
-							//Custom highlight
-							text = text.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
-							//Highlights
-							text = text.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>');
-							
-						}
-						//Extended
-						if (settings.extendedSupport) {
-
-							//Superscript 
-							text = text.replace(/\^(.+?)\^/g, '<sup>$1</sup>');
-							//Subscript
-							text = text.replace(/\~(.+?)\~/g, '<sub>$1</sub>');
-
-
-							//Custom spans
-							text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
-							// TODO: add spoilers and other stuff
-							// TODO: Allow custom tag delimiters?
-							// TODO: support block styling
-						}
-						return text;
-					},
-					'hashHTMLBlocks.after':function (event: any, text: any, converter: any, options: any, globals: any) {
-						//Force showdown to parse html spans
-						// HACK: This is needed to stop parser from fucking up inline html elements
-						return subParser("hashHTMLSpans")(text,options,globals)
-						// TODO: Replace Showdown with parser that doesn't break nested spans
-					},
-					'hashHTMLSpans.after':function (event: any, text: any, converter: any, options: any, globals: any) {
-						debugger;
-					},
-
-					"paragraphs.after": function (event: any, text: string, converter: any, options: any, globals: any) {
-						if(settings.experimental){
-							// Split in basic paragraphs (warning: not all block elements will separate)
-							let paragraphs = text.split(/(?<=<\/p>)\n/gm)
-							paragraphs = paragraphs.map((str)=>{
-								let match = text.match(/^<p>::::*([\w\-\u0020]+)<br \/>\n/)
-								if(match){
-									str = str.slice(match[0].length)
-									str = `<p class="${match[1]}">`+str;
-								}
-								return str;
-							})
-							text = paragraphs.join("\n");
-							
-						}
-						return text;
-					}
-				}
-			};
-			return [myext];
-		});
-	}
+	
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
