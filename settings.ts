@@ -21,6 +21,8 @@ export interface MarkdownToHTMLSettings {
     removeInlined: boolean;
     /**Maximum width of the html container when rendering as png */
     renderMaxwidth:string;
+	/**Maximum width of the html container when rendering as png in mobile*/
+    renderMaxwidthMobile:string;
     /**Enables selector filtering*/
     useFilter: boolean;
     /**Annotation selector*/
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
     snippets: [],
     removeInlined: false,
     renderMaxwidth:"60vw",
+	renderMaxwidthMobile:"",
     useFilter:false,
     filterSelector:"",
     renderScale: 2,
@@ -71,6 +74,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		this.addToggle(containerEl, 'wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
 		this.addToggle(containerEl, "removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
 		this.addTextField(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")
+		this.addTextField(containerEl, "renderMaxwidthMobile", "Max render width in mobile", "CSS for the maximum container width when rendering markdown to PNG in mobile mode")
 		 new Setting(containerEl).setName("Render scale").setDesc("Sets the rendering scale")
 			.addSlider(
 				slider => slider.setLimits(1,10,0.5)
@@ -83,6 +87,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		this.addToggle(containerEl, 'useFilter', "Activates selector filtering", "Allows to 'filter' the generated html to remove elements")
 
         //Filter code area
+
 		const context:SettingsContext<MarkdownToHTMLSettings> = {containerEl, plugin:this.plugin,settings}
 		const validator = (input:string, field:TextAreaComponent) => { 
             const el = createDiv();

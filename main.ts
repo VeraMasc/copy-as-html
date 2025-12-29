@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
+import { App, Editor, Platform, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
 import { Converter, extension, subParser } from 'showdown';
 import {type DomToImage} from "dom-to-image"
 
@@ -154,7 +154,8 @@ async markdownToPNG(editor: Editor) {
 
 	async nodeToImage(node:HTMLElement){
 		try{
-			node.style.maxWidth= this.settings.renderMaxwidth;
+			node.style.maxWidth= Platform.isMobile? this.settings.renderMaxwidthMobile
+					:this.settings.renderMaxwidth;
 			node.style.padding= "2em";
 			
 		
