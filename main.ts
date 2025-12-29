@@ -1,5 +1,5 @@
 import { App, Editor, Platform, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
-import { Converter, extension, subParser } from 'showdown';
+import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
 import {type DomToImage} from "dom-to-image"
 
 import dti  from 'dom-to-image-more'
@@ -251,33 +251,16 @@ async markdownToPNG(editor: Editor) {
 						}
 						return text;
 					},
+					'hashHTMLBlocks.after':function (event: any, text: any, converter: any, options: any, globals: any) {
+						//Force showdown to parse html spans
+						// HACK: This is needed to stop parser from fucking up inline html elements
+						return subParser("hashHTMLSpans")(text,options,globals)
+						// TODO: Replace Showdown with parser that doesn't break nested spans
+					},
+					'hashHTMLSpans.after':function (event: any, text: any, converter: any, options: any, globals: any) {
+						debugger;
+					},
 
-					// "spanGamut.before": function (event: any, text: string, converter: any, options: any, globals: any) {
-					// 	console.log(text);
-					// 	let match = text.match(/^::::*([\w\-\u0020]+)\n/m)
-						
-					// 	if(match){
-					// 		console.log({event,text,converter,options,globals})
-					// 		debugger;
-					// 		text = text.slice(match[0].length)
-					// 		// TODO: Figure this out
-					// 		text = `<span value="${match[1]}"/>${text}`
-					// 		// text = `<p class="${match[1]}">${text}</p>`
-					// 	}
-						
-					// 	return text;
-					// },
-					// "spanGamut.after": function (event: any, text: string, converter: any, options: any, globals: any) {
-					// 	// console.log(text);
-					// 	// let match = text.match(/^::::*([\w\-\u0020]+)<br \/>\n/m)
-					// 	// debugger;
-					// 	// if(match){
-					// 	// 	text = text.slice(match[0].length)
-					// 	// 	text = `<p>${text}</p>`
-					// 	// }
-						
-					// 	// return text;
-					// },
 					"paragraphs.after": function (event: any, text: string, converter: any, options: any, globals: any) {
 						if(settings.experimental){
 							// Split in basic paragraphs (warning: not all block elements will separate)
