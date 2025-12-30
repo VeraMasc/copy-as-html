@@ -1,16 +1,18 @@
 import { App, Editor, Platform, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
 import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
-import {type DomToImage} from "dom-to-image"
+import { createExtension } from 'src/extension';
 
-import dti  from 'dom-to-image-more'
+
 import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "src/settings"
-import {createExtension} from "src/extension"
+import { MDConverter } from './src/converter';
 
-const  domtoimage:DomToImage =dti; 
+
+
 
 
 export default class MarkdownToHTML extends Plugin {
 	settings: MarkdownToHTMLSettings;
+	converter: MDConverter = new MDConverter(this)
 
 	async onload() {
 		await this.loadSettings();
@@ -18,105 +20,38 @@ export default class MarkdownToHTML extends Plugin {
 			id: 'copy-as-html-command',
 			name: 'Copy as HTML command',
 			icon:'code-xml',
-			editorCallback: (editor: any) => this.markdownToHTML(editor)
+			editorCallback: (editor: any) => this.converter.selectionToHTML(editor)
 		});
 		this.addCommand({
 			id: 'copy-as-img-command',
 			name: 'Copy as img command',
 			icon: "image-plus",
-			editorCallback: (editor: any) => this.markdownToPNG(editor)
+			editorCallback: (editor: any) => this.converter.selectionToPNG(editor)
 		});
 
 		this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
 	}
 
-	/**Gets the showdown converter */
-	getConverter() {
-		return new Converter({backslashEscapesHTMLTags:true, tasklists:true})
-	};
+	/**Writes to clipboard as soon as it becomes possible */
+	writeToClipboard(data:ClipboardItems) {
+	const func = ()=> navigator.clipboard.write(data);
+	if(document.hasFocus())
+		return func();
+    return new Promise<void>((resolve, reject) => {
+        const _asyncCopyFn = (async () => {
+            try {
+                await func();
 
-	async markdownToHTML(editor: Editor) {
-		const converter = this.getConverter();
-		converter.setFlavor('github');
-		converter.setOption('ellipsis', false);
-		let text = editor.getSelection();
-		const div = createDiv();
-		try {
-			createExtension.call(this);
-			converter.useExtension("extended-tags")
-
-			if (this.settings.removeComments) {
-				text = text.replace(/%%.+?%%/gs, '');
-			}
-			const html = converter.makeHtml(text).toString();
-			let outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
-			// TODO: Refactor
-			div.style.maxHeight = '0';
-			div.style.overflow = 'hidden';
-			div.innerHTML = outputHtml;
-			if(this.settings.useFilter)
-				this.filterHTML(this.settings.filterSelector, div)
-			await this.inlineStyles(div);
-			// TODO: Remove classes
-			outputHtml = div.innerHTML;
-			//@ts-ignore
-			const blob = new Blob([outputHtml], {
-				//@ts-ignore
-				type: ["text/plain", "text/html"]
-			})
-			const data = [new ClipboardItem({
-				//@ts-ignore
-				["text/plain"]: blob,
-				//@ts-ignore
-				["text/html"]: blob
-			})];
-			//@ts-ignore
-			navigator.clipboard.write(data);
-			div.detach()
-		} catch (err) {
-			new Notice("Failed to copy as HTML:\n" + err, null)
-			div?.detach()
-			throw err;
-		}
-
-	}
-
-async markdownToPNG(editor: Editor) {
-		const converter = this.getConverter();
-		converter.setFlavor('github');
-		converter.setOption('ellipsis', false);
-		let text = editor.getSelection();
-		const div = createDiv();
-		let popup = new Notice("Generating Image", null);
-		try {
-			createExtension.call(this);
-			converter.useExtension("extended-tags")
-
-			if (this.settings.removeComments) {
-				text = text.replace(/%%.+?%%/gs, '');
-			}
-			const html = converter.makeHtml(text);
-			let outputHtml = this.settings.wrapResult ? `<div id="content">${html}</div>` : html;
-			// TODO: Refactor
-			// div.style.maxHeight = '0';
-			// div.style.overflow = 'hidden';
-			div.innerHTML = outputHtml;
-			if(this.settings.useFilter)
-				this.filterHTML(this.settings.filterSelector, div)
-			// await this.inlineStyles(div);
-			document.body.append(div)
-			await this.nodeToImage(div)
-			popup.hide();
-			div.detach()
-		} catch (err) {
-			popup.hide();
-			new Notice("Failed to copy as IMG:\n" + err, null)
-			div?.detach()
-			throw err;
-		}
-
-	}
-
+                resolve();
+            } catch (e) {
+                reject(e);
+            }
+            window.removeEventListener("focus", _asyncCopyFn);
+        });
+    
+        window.addEventListener("focus", _asyncCopyFn);
+    });
+}
 
 
 
@@ -158,37 +93,10 @@ async markdownToPNG(editor: Editor) {
 		}
 	}
 
-	async nodeToImage(node:HTMLElement){
-		try{
-			node.style.maxWidth= Platform.isMobile? this.settings.renderMaxwidthMobile
-					:this.settings.renderMaxwidth;
-			node.style.padding= "2em";
-			
-		
-			
-			const blob = await domtoimage.toBlob(node,
-				{
-					//@ts-ignore
-					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
-					scale:this.settings.renderScale,
-
-				} as any);
-			
-			const data = [new ClipboardItem({
-				
-					[blob.type]: blob,
-			
-				} as any)];
-				navigator.clipboard.write(data);
-			new Notice("Exported to png")
-		}catch(err){
-			new Notice("Failed to convert to image: "+err)
-			throw err
-		}
-	}
+	
 
 	/**Inlines the chosen styles */
-	private async inlineStyles(div: HTMLDivElement) {
+	async inlineStyles(div: HTMLDivElement) {
 		const doc = document.implementation.createHTMLDocument("");
 		doc.body.append(div);
 		let styles: CSSStyleSheet[] = await Promise.all(this.settings.snippets.map(async (snippet) => {
@@ -200,7 +108,7 @@ async markdownToPNG(editor: Editor) {
 		this.applyInline(div, styles);
 	}
 
-	private filterHTML(selector:string, root:HTMLElement){
+	filterHTML(selector:string, root:HTMLElement){
 		try{
 			let toRemove = root.querySelectorAll(selector);
 			for(let el of toRemove){
@@ -215,10 +123,12 @@ async markdownToPNG(editor: Editor) {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		createExtension(this); //Update the extension to match settings
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		createExtension(this); //Update the extension to match settings
 	}
 
 	onunload() {

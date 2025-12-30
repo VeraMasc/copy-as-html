@@ -3,8 +3,8 @@ import  MarkdownToHTML from "main";
 import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
 
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
-export function  createExtension(this:MarkdownToHTML) {
-		let settings = this.settings;
+export function  createExtension(plugin:MarkdownToHTML) {
+		let settings = plugin.settings;
 		extension('extended-tags', function () {
 			var myext = {
 				type: 'listener',
