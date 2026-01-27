@@ -41,7 +41,7 @@ export function  createExtension(plugin:MarkdownToHTML) {
 
 
 							//Custom spans
-							text = text.replace(/!+(?<!\!\!\!)(?![!\s])(?:{([\w\s-]*?)})?(.+?)!+(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
+							text = text.replace(/(?<!\!)!!{([\w\s-]*?)}(.+?)!!(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
 							// TODO: add spoilers and other stuff
 							// TODO: Allow custom tag delimiters?
 							// TODO: support block styling

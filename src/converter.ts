@@ -124,7 +124,8 @@ export class MDConverter{
 			
 			} as any)];
 			await this.plugin.writeToClipboard(data);
-			new Notice("Exported to png")
+			debugger;
+			new Notice(`Exported to png (${blob.size})`)
 		}catch(err){
 			new Notice("Failed to convert to image: "+err)
 			throw err
