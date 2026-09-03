@@ -60,6 +60,7 @@ export class MDConverter{
 		try {
 			this.MDtoHTML(text, div);
 			document.body.append(div)
+			
 			await this.nodeToImage(div)
 			popup.hide();
 			div.detach()
@@ -124,7 +125,6 @@ export class MDConverter{
 			
 			} as any)];
 			await this.plugin.writeToClipboard(data);
-			debugger;
 			new Notice(`Exported to png (${blob.size})`)
 		}catch(err){
 			new Notice("Failed to convert to image: "+err)

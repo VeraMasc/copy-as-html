@@ -12,6 +12,7 @@
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["dom", "dom.iterable", "esnext"],
+    "allowSyntheticDefaultImports":true,
   },
   "include": [
     "**/*.ts"

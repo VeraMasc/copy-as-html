@@ -18,8 +18,6 @@ export default class MarkdownToHTML extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		
-		let worker = workly.proxy(test);
-		console.log(await worker());
 		this.addCommand({
 			id: 'copy-as-html-command',
 			name: 'Copy as HTML command',
