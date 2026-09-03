@@ -5,17 +5,21 @@ import { createExtension } from 'src/extension';
 
 import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "src/settings"
 import { MDConverter } from './src/converter';
-
+import * as workly from 'workly/dist/workly.m.js'
+import {test} from './src/Worker/convert.worker';
 
 
 
 
 export default class MarkdownToHTML extends Plugin {
-	settings: MarkdownToHTMLSettings;
+	declare settings: MarkdownToHTMLSettings;
 	converter: MDConverter = new MDConverter(this)
 
 	async onload() {
 		await this.loadSettings();
+		
+		let worker = workly.proxy(test);
+		console.log(await worker());
 		this.addCommand({
 			id: 'copy-as-html-command',
 			name: 'Copy as HTML command',
@@ -103,7 +107,7 @@ export default class MarkdownToHTML extends Plugin {
 			let style = createEl('style');
 			style.textContent = await this.app.vault.adapter.read((this.app as any).customCss.getSnippetPath(snippet))
 			doc.head.append(style);
-			return style.sheet;
+			return <CSSStyleSheet>style.sheet;
 		}))
 		this.applyInline(div, styles);
 	}

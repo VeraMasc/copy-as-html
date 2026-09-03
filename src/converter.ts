@@ -45,7 +45,7 @@ export class MDConverter{
 			await this.plugin.writeToClipboard(data);
 			div.detach()
 		} catch (err) {
-			new Notice("Failed to copy as HTML:\n" + err, null)
+			new Notice("Failed to copy as HTML:\n" + err)
 			div?.detach()
 			throw err;
 		}
@@ -56,7 +56,7 @@ export class MDConverter{
 	async selectionToPNG( editor: Editor) {
 		let text = editor.getSelection();
 		const div = createDiv();
-		let popup = new Notice("Generating Image", null);
+		let popup = new Notice("Generating Image");
 		try {
 			this.MDtoHTML(text, div);
 			document.body.append(div)
@@ -65,7 +65,7 @@ export class MDConverter{
 			div.detach()
 		} catch (err) {
 			popup.hide();
-			new Notice("Failed to copy as IMG:\n" + err, null)
+			new Notice("Failed to copy as IMG:\n" + err )
 			div?.detach()
 			throw err;
 		}
@@ -73,7 +73,7 @@ export class MDConverter{
 	}
 	
 	/**Processes the conversion */
-	async MDtoHTML(text:string, container:HTMLDivElement=null):Promise<HTMLDivElement>{
+	async MDtoHTML(text:string, container:HTMLDivElement|null=null):Promise<HTMLDivElement>{
 		// TODO: FIX AND IMPLEMENT
 		const {settings} = this.plugin;
 		container ??= createDiv();
