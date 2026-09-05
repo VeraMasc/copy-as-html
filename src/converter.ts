@@ -7,7 +7,7 @@ import {createExtension} from "src/extension"
 import {type DomToImage} from "dom-to-image"
 import dti  from 'dom-to-image-more'
 
-const  domtoimage:DomToImage =dti; 
+const  domtoimage =dti; 
 
 /**Class in charge of the actual conversion */
 export class MDConverter{
@@ -116,8 +116,11 @@ export class MDConverter{
 					//@ts-ignore
 					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
 					scale:settings.renderScale,
+					httpTimeout: 3000,
+					copyDefaultStyles:true,
+					// TODO: Consider not embedding fonts or adding a toggle for that
 
-				} as any);
+				} as dti.Options);
 			
 			const data = [new ClipboardItem({
 				
