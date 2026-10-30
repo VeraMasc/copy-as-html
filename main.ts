@@ -5,8 +5,8 @@ import { createExtension } from 'src/extension';
 
 import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "src/settings"
 import { MDConverter } from './src/converter';
-import * as workly from 'workly/dist/workly.m.js'
-import {test} from './src/Worker/convert.worker';
+
+
 
 
 
@@ -30,6 +30,12 @@ export default class MarkdownToHTML extends Plugin {
 			icon: "image-plus",
 			editorCallback: (editor: any) => this.converter.selectionToPNG(editor)
 		});
+		this.addCommand({
+			id: 'export-to-html-command',
+			name: 'Export to html file',
+			icon: "code-xml",
+			editorCallback: (editor: any, ctx:any) => this.converter.selectionToHTMLDoc(editor, ctx)
+		}); 
 
 		this.addSettingTab(new MarkdownToHTMLSettingTab(this.app, this));
 	}
@@ -96,19 +102,6 @@ export default class MarkdownToHTML extends Plugin {
 	}
 
 	
-
-	/**Inlines the chosen styles */
-	async inlineStyles(div: HTMLDivElement) {
-		const doc = document.implementation.createHTMLDocument("");
-		doc.body.append(div);
-		let styles: CSSStyleSheet[] = await Promise.all(this.settings.snippets.map(async (snippet) => {
-			let style = createEl('style');
-			style.textContent = await this.app.vault.adapter.read((this.app as any).customCss.getSnippetPath(snippet))
-			doc.head.append(style);
-			return <CSSStyleSheet>style.sheet;
-		}))
-		this.applyInline(div, styles);
-	}
 
 	filterHTML(selector:string, root:HTMLElement){
 		try{

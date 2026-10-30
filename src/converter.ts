@@ -1,11 +1,12 @@
 import  MarkdownToHTML from "main";
-import { Editor, Notice, Platform } from "obsidian";
+import { Editor, MarkdownFileInfo, MarkdownView, normalizePath, Notice, Platform } from "obsidian";
 import { Converter } from "showdown";
 import {createExtension} from "src/extension"
 
 
 import {type DomToImage} from "dom-to-image"
 import dti  from 'dom-to-image-more'
+import { getAllSnippetContent } from "./snippets";
 
 const  domtoimage =dti; 
 
@@ -33,13 +34,13 @@ export class MDConverter{
 			//@ts-ignore
 			const blob = new Blob([div.innerHTML], {
 				//@ts-ignore
-				type: ["text/plain", "text/html"]
+				type: ["text/plain", "text/html"],
 			})
 			const data = [new ClipboardItem({
 				//@ts-ignore
 				["text/plain"]: blob,
 				//@ts-ignore
-				["text/html"]: blob
+				["text/html"]: blob,
 			})];
 			//@ts-ignore
 			await this.plugin.writeToClipboard(data);
@@ -50,6 +51,35 @@ export class MDConverter{
 			throw err;
 		}
 
+	}
+
+	async selectionToHTMLDoc(editor: Editor, ctx:MarkdownView | MarkdownFileInfo) {
+		let text = editor.getSelection();
+		const div = createDiv();
+		try {
+			await this.MDtoHTML(text, div);
+			let {settings, app}=this.plugin;
+			let styles: string[] = await getAllSnippetContent(settings.snippets, app)
+			let doc = `<head><style>${styles}</style></head><body class="is-exported">${div.innerHTML}</body>`
+			console.warn(doc);
+			if(!ctx.file)
+				throw new ReferenceError("Could not find source file")
+			
+			let docpath = ctx.file.parent!.path;
+			let docname = normalizePath(`${docpath}/${ctx.file.basename}.html`)
+			let adapter = ctx.app.vault.adapter;
+			let exists = await adapter.exists(docname)
+			if(!exists){
+				await adapter.write(docname,doc)
+			}else{
+				console.error(`File ${docname} already exists`)
+			}
+			div.detach()
+		} catch (err) {
+			new Notice("Failed to Export as HTML:\n" + err)
+			div?.detach()
+			throw err;
+		}
 	}
 	
 	/**Converts the selection to a PNG image */
@@ -91,7 +121,6 @@ export class MDConverter{
 			container.innerHTML = outputHtml;
 			if(settings.useFilter)
 				this.plugin.filterHTML(settings.filterSelector, container)
-			await this.plugin.inlineStyles(container);
 			// TODO: Remove classes
 			return container;
 

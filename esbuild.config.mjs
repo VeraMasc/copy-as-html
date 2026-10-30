@@ -49,7 +49,8 @@ esbuild.build({
 	minify:true,
 	minifyWhitespace:true,
 	minifySyntax:true,
-	sourcemap:  prod?"external":"inline",
+	minifyIdentifiers: true,
+	sourcemap: true,
 	treeShaking: true,
 	outfile: 'main.js',
 }).catch(() => process.exit(1));
