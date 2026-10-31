@@ -1,6 +1,6 @@
 import { App, Editor, Platform, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
 import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
-import { createExtension } from 'src/extension';
+import { createExtension_ } from 'src/extension';
 
 
 import {DEFAULT_SETTINGS, MarkdownToHTMLSettingTab, MarkdownToHTMLSettings} from "src/settings"
@@ -66,7 +66,7 @@ export default class MarkdownToHTML extends Plugin {
 	/**
 	 * https://stackoverflow.com/questions/62292885/convert-css-styles-to-inline-styles-with-javascript-keeping-the-style-units 
 	 * */
-	applyInline(element: HTMLElement, styles: CSSStyleSheet[] | StyleSheetList) {
+	applyInline(element: HTMLElement, styles: CSSStyleSheet[] | StyleSheetList) { // TODO: Remove? Does it do anything?
 		const elements = [element, ...element.querySelectorAll("*")];
 		const elementRules = document.createElement(element.tagName).style;
 		elementRules.cssText = element.style.cssText;
@@ -118,12 +118,12 @@ export default class MarkdownToHTML extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		createExtension(this); //Update the extension to match settings
+		createExtension_(this); //Update the extension to match settings
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		createExtension(this); //Update the extension to match settings
+		createExtension_(this); //Update the extension to match settings
 	}
 
 	onunload() {

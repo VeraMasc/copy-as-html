@@ -61,30 +61,31 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		let { containerEl } = this;
+		let { containerEl, addToggle_: addToggle} = this;
+		let contAddToggle = addToggle.bind(this,containerEl)
+		//addToggle = addToggle.bind(this);
 		let settings = this.plugin.settings;
 		containerEl.empty();
-		this.addToggle(containerEl, 'removeBrackets', "Remove Wikilink brackets", "If enabled, removes wikilink brackets from copied text.")
-		this.addToggle(containerEl, 'removeEmphasis', "Remove text emphasis", "If enabled, removes text styling such as bold, italics, and highlights.")
-		this.addToggle(containerEl, 'removeTags', "Remove hashtags", "If enabled, removes text immediately after a hashtag.")
-		this.addToggle(containerEl, 'removeComments', "Remove comments", "If enabled, removes commented text.")
-		this.addToggle(containerEl, 'obsidianSupport', "Support Obsidian Markdown Syntax", "If enabled, it will handle highlights, tags and other obsidian specific elements.")
-		this.addToggle(containerEl, 'extendedSupport', "Support Extended Markdown Syntax", "If enabled, it will handle custom spans and other highlight colors.")
-		this.addToggle(containerEl, 'experimental', "Enable experimental features", "Mostly for testing, enables unreliable features that might not be production ready")
-		this.addToggle(containerEl, 'wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
-		this.addToggle(containerEl, "removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
-		this.addTextField(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")
-		this.addTextField(containerEl, "renderMaxwidthMobile", "Max render width in mobile", "CSS for the maximum container width when rendering markdown to PNG in mobile mode")
+		contAddToggle('removeBrackets', "Remove Wikilink brackets", "If enabled, removes wikilink brackets from copied text.")
+		contAddToggle('removeEmphasis', "Remove text emphasis", "If enabled, removes text styling such as bold, italics, and highlights.")
+		contAddToggle('removeTags', "Remove hashtags", "If enabled, removes text immediately after a hashtag.")
+		contAddToggle('removeComments', "Remove comments", "If enabled, removes commented text.")
+		contAddToggle('obsidianSupport', "Support Obsidian Markdown Syntax", "If enabled, it will handle highlights, tags and other obsidian specific elements.")
+		contAddToggle('extendedSupport', "Support Extended Markdown Syntax", "If enabled, it will handle custom spans and other highlight colors.")
+		contAddToggle('experimental', "Enable experimental features", "Mostly for testing, enables unreliable features that might not be production ready")
+		contAddToggle('wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
+		contAddToggle("removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
+		this.addTextField_(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")
+		this.addTextField_(containerEl, "renderMaxwidthMobile", "Max render width in mobile", "CSS for the maximum container width when rendering markdown to PNG in mobile mode")
 		 new Setting(containerEl).setName("Render scale").setDesc("Sets the rendering scale")
 			.addSlider(
 				slider => slider.setLimits(1,10,0.5)
 					.setValue(settings.renderScale)
-					.setDynamicTooltip()
 					.onChange(async v => {settings.renderScale = v; await this.plugin.saveSettings()})
 			)
 
 		// TODO: adaptative scale
-		this.addToggle(containerEl, 'useFilter', "Activates selector filtering", "Allows to 'filter' the generated html to remove elements")
+		contAddToggle('useFilter', "Activates selector filtering", "Allows to 'filter' the generated html to remove elements")
 
         //Filter code area
 
@@ -139,7 +140,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 	}
 
 
-	private addToggle(el: HTMLElement, prop: SettingProps, name: string, descr: string) {
+	private addToggle_(el: HTMLElement, prop: SettingProps, name: string, descr: string) {
 		new Setting(el)
 			.setName(name)
 			.setDesc(descr)
@@ -151,7 +152,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 				}));
 	}
 
-	private addTextField(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
+	private addTextField_(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
 		new Setting(el)
 			.setName(name)
 			.setDesc(descr)
@@ -163,7 +164,7 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 				}));
 	}
 
-	private addTextAreaField(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
+	private addTextAreaField_(el: HTMLElement, prop: SettingTextFields, name: string, descr: string) {
 		new Setting(el)
 			.setName(name)
 			.setDesc(descr)

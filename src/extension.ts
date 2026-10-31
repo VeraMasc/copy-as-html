@@ -3,21 +3,22 @@ import  MarkdownToHTML from "main";
 import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
 
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
-export function  createExtension(plugin:MarkdownToHTML) {
+export function  createExtension_(plugin:MarkdownToHTML) {
 		let settings = plugin.settings;
 		extension('extended-tags', function () {
 			var myext = {
 				type: 'listener',
-				listeners: {
+				listeners: { // TODO: Use proper types for the extension
 					'italicsAndBold.before': function (event: any, text: any, converter: any, options: any, globals: any) {
 						//Cleanup
+						let {removeTags, obsidianSupport, removeEmphasis, removeBrackets} = settings;
 						text = text.replace(/\^\w+$/g, ''); //removing block reference ids
-						if (settings.removeTags || settings.obsidianSupport)
-							text = text.replace(/(#\w+)/g, settings.removeTags ? '' : '<span class="tag">$1</span>');
-						if (settings.removeEmphasis) {
+						if (removeTags || obsidianSupport)
+							text = text.replace(/(#\w+)/g, removeTags ? '' : '<span class="tag">$1</span>');
+						if (removeEmphasis) {
 							text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
 						}
-						if (settings.removeBrackets) {
+						if (removeBrackets) {
 							text = text.replace(/\[\[(.*?)\]\]/g, '$1');
 						}
 						return text;
@@ -25,23 +26,21 @@ export function  createExtension(plugin:MarkdownToHTML) {
 					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
 						//Obsidian
 						if (settings.obsidianSupport) {
-							//Custom highlight
-							text = text.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>');
-							//Highlights
-							text = text.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>');
+							// TODO: Merge hilight regex
+							text = text
+								.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>') //Custom highlight
+								.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>'); //Highlights
 							
 						}
 						//Extended
 						if (settings.extendedSupport) {
 
-							//Superscript 
-							text = text.replace(/\^(.+?)\^/g, '<sup>$1</sup>');
-							//Subscript
-							text = text.replace(/\~(.+?)\~/g, '<sub>$1</sub>');
-
-
-							//Custom spans
-							text = text.replace(/(?<!\!)!!{([\w\s-]*?)}(.+?)!!(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');
+							
+							text = text
+								.replace(/\^(.+?)\^/g, '<sup>$1</sup>') //Superscript 
+								.replace(/\~(.+?)\~/g, '<sub>$1</sub>') //Subscript
+								.replace(/(?<!\!)!!{([\w\s-]*?)}(.+?)!!(?<![!\s]\!\!)(?!\!)/g, '<span class="$1">$2</span>');//Custom spans
+							
 							// TODO: add spoilers and other stuff
 							// TODO: Allow custom tag delimiters?
 							// TODO: support block styling

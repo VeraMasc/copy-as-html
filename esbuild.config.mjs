@@ -43,9 +43,10 @@ esbuild.build({
 		'@codemirror/view',
 		...builtins],
 	format: 'cjs',
-	watch: !prod,
 	target: 'esnext',
 	logLevel: "info",
+	mangleProps: /_$/,
+	reserveProps: /^__.*__$/,
 	minify:true,
 	minifyWhitespace:true,
 	minifySyntax:true,
@@ -53,4 +54,9 @@ esbuild.build({
 	sourcemap: true,
 	treeShaking: true,
 	outfile: 'main.js',
-}).catch(() => process.exit(1));
+})
+.then((r) => {
+    console.log('✨ Build succeeded.');
+
+})
+.catch(() => process.exit(1));
