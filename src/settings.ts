@@ -27,6 +27,10 @@ export interface MarkdownToHTMLSettings {
     useFilter: boolean;
     /**Annotation selector*/
     filterSelector:string;
+	/**Indicates if fonts should be embedded (WARNING: Very slow)*/
+	embedFonts:boolean;
+	/**Indicates if only local fonts should be embedded*/
+	localFontsOnly:boolean;
     /**Rendering scale*/
     renderScale:number;
 }
@@ -47,6 +51,8 @@ export const DEFAULT_SETTINGS: MarkdownToHTMLSettings = {
 	renderMaxwidthMobile:"",
     useFilter:false,
     filterSelector:"",
+	embedFonts:false,
+	localFontsOnly:false,
     renderScale: 2,
 };
 
@@ -75,6 +81,8 @@ export class MarkdownToHTMLSettingTab extends PluginSettingTab {
 		contAddToggle('experimental', "Enable experimental features", "Mostly for testing, enables unreliable features that might not be production ready")
 		contAddToggle('wrapResult', "Wrap the output", "If enabled, it will wrap the resulting HTML in a div.")
 		contAddToggle("removeInlined", "Remove inlined classes", "If enabled, classes that have had their style inlined will be removed from the HTML")
+		contAddToggle("embedFonts", "Embed web fonts", "If enabled, web fonts will be loaded and rendered. WARNING: This can heavily affect performance depending on the fonts.")
+		contAddToggle("localFontsOnly", "Embed local fonts only", "Only web fonts that are stored in this device (\"app:\" url) will be loaded to avoid wasting time and bandwith.")
 		this.addTextField_(containerEl, "renderMaxwidth", "Max render width", "CSS for the maximum container width when rendering markdown to PNG")
 		this.addTextField_(containerEl, "renderMaxwidthMobile", "Max render width in mobile", "CSS for the maximum container width when rendering markdown to PNG in mobile mode")
 		 new Setting(containerEl).setName("Render scale").setDesc("Sets the rendering scale")

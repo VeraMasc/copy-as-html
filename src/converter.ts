@@ -163,21 +163,20 @@ export class MDConverter{
 			node.style.padding= "2em";
 			
 		
-			
 			const blob = await domtoimage.toBlob(node,
 				{
 					//@ts-ignore
 					bgcolor:"rgba(30, 30, 30, 1)", // TODO: Extract from css
 					scale:settings.renderScale,
-					httpTimeout: 1000,
+					httpTimeout: 3000,
 					styleCaching: "relaxed",
-					disableEmbedFonts:false, //Improves speed a lot but breaks fonts
 					copyDefaultStyles:true,
-					// TODO: Consider not embedding fonts or adding a toggle for that
-					// TODO: Embedding fonts throttles everything, find a way to optimize it
-
+					filterFonts: (f) => {
+						return settings.embedFonts && f.used && //Enable or disable embedding fonts
+							(f.src.startsWith("url(\"app:") || settings.localFontsOnly); //Ensure only local fonts are loaded
+					}
 				} as dti.Options);
-			
+	
 			const data = [new ClipboardItem({
 				
 					[blob.type]: blob,
