@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
 import  MarkdownToHTML from "main";
-import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
+import { Converter, extension, subParser, ConverterGlobals,ShowdownOptions } from 'showdown';
 
 	/**Creates the listener extension needed to handle tags without breaking codeblocks */
 export function  createExtension_(plugin:MarkdownToHTML) {
@@ -8,8 +8,27 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 		extension('extended-tags', function () {
 			var myext = {
 				type: 'listener',
-				listeners: { // TODO: Use proper types for the extension
-					'italicsAndBold.before': function (event: any, text: any, converter: any, options: any, globals: any) {
+				listeners: {
+					'hashBlock.before':function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
+						
+						// TODO: Fully implement rendering callouts
+
+						if(settings.experimental && /^<blockquote>\s*<p>\[!/.test(text)){
+							let match = /^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/.exec(text)
+							// console.warn(text,match)
+							let type = match?.[3]
+							if(type){
+								let title = match![4] ?? (type.charAt(0).toUpperCase() + type.slice(1));
+								// HACK: Properly handle callout titles having a </p> at the end
+								title = title.replace(/<\/p>$/,'')
+								text = `<blockquote class="callout" data-callout="${type}">\n<div class="callout-title">${title}</div>\n<p>` +text.slice(match![0].length)
+							}
+							
+						}
+						
+						return text;
+					},
+					'italicsAndBold.before': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Cleanup
 						let {removeTags, obsidianSupport, removeEmphasis, removeBrackets} = settings;
 						text = text.replace(/\^\w+$/g, ''); //removing block reference ids
@@ -23,7 +42,7 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						}
 						return text;
 					},
-					'strikethrough.after': function (event: any, text: any, converter: any, options: any, globals: any) {
+					'strikethrough.after': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Obsidian
 						if (settings.obsidianSupport) {
 							// TODO: Merge hilight regex
@@ -47,14 +66,14 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						}
 						return text;
 					},
-					'hashHTMLBlocks.after':function (event: any, text: any, converter: any, options: any, globals: any) {
+					'hashHTMLBlocks.after':function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Force showdown to parse html spans
 						// HACK: This is needed to stop parser from fucking up inline html elements
 						return subParser("hashHTMLSpans")(text,options,globals)
 						// TODO: Replace Showdown with parser that doesn't break nested spans
 					},
 
-					"paragraphs.after": function (event: any, text: string, converter: any, options: any, globals: any) {
+					"paragraphs.after":function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						if(settings.experimental){
 							// Split in basic paragraphs (warning: not all block elements will separate)
 							let paragraphs = text.split(/(?<=<\/p>)\n/gm)

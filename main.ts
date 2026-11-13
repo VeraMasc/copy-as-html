@@ -1,5 +1,4 @@
 import { App, Editor, Platform, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent } from 'obsidian';
-import { Converter, extension, subParser, ConverterGlobals } from 'showdown';
 import { createExtension_ } from 'src/extension';
 
 
