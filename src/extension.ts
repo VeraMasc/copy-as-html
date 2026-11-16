@@ -13,20 +13,24 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						// TODO: Fully implement rendering callouts
 
 						if(settings.experimental && /^<blockquote>\s*<p>\[!/.test(text)){
-							text.replace(/^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/, (str:string, ...matches)=>{
-								console.warn(str,matches)
-								return str;
+							text = text.replace(/(?<=^<blockquote)>\s*<p>\[!([^\[\]]+)](?:\s([^\n]+?)(?=<(?:\/p|br\s*\/)>|$\n))?/, (str:string, ...match)=>{
+								// console.warn(str,match)
+								let type = match[0];
+								if(!type)
+									return str;
+								let title = match![1] ?? (type.charAt(0).toUpperCase() + type.slice(1));
+								return ` class="callout" data-callout="${type}">\n<div class="callout-title">${title}</div>\n<p>`;
 							})
 
-							let match = /^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/.exec(text)
-							// console.warn(text,match)
-							let type = match?.[3]
-							if(type){
-								let title = match![4] ?? (type.charAt(0).toUpperCase() + type.slice(1));
-								// HACK: Properly handle callout titles having a </p> at the end
-								title = title.replace(/<\/p>$/,'')
-								text = `<blockquote class="callout" data-callout="${type}">\n<div class="callout-title">${title}</div>\n<p>` +text.slice(match![0].length)
-							}
+							// let match = /^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/.exec(text)
+							// // console.warn(text,match)
+							// let type = match?.[3]
+							// if(type){
+							// 	let title = match![4] ?? (type.charAt(0).toUpperCase() + type.slice(1));
+							// 	// HACK: Properly handle callout titles having a </p> at the end
+							// 	title = title.replace(/<\/p>$/,'')
+							// 	text = `<blockquote class="callout" data-callout="${type}">\n<div class="callout-title">${title}</div>\n<p>` +text.slice(match![0].length)
+							// }
 							
 						}
 						
@@ -37,15 +41,13 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						text = text.replace(/\[\[([^|\]#]*)(?:#([^\]\|]+))?(?:\|([^\]]+))?\]\]/g, (str:string, ...matches)=>{
 							console.log(str, matches)
 							let path = encodeURI(matches[0]) + (matches[1]? '#'+ encodeURI(matches[1]):'');
-							console.warn(path)
+							// console.warn(path)
 							let title = matches[2] ?? (
 								(matches[0] && matches[1])? 
 									matches[0]+'#'+matches[1]
 									:(matches[0] || matches[1] || '')
 							);
-							let ret = `[${title}](${path})`;
-							console.log(ret);
-							return ret;
+							return `[${title}](${path})`;
 						})
 
 						// TODO: Fix links and wikilinks starting with "#"
@@ -74,10 +76,14 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 					'strikethrough.after': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Obsidian
 						if (settings.obsidianSupport) {
-							// TODO: Merge hilight regex
+							// TODO: Add new regex hilights
+							// Hilights and Custom highlights
 							text = text
-								.replace(/\=\=(?:{(.*?)})(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight cm-custom-highlight-$1">$2</span>') //Custom highlight
-								.replace(/\=\=(.+?)\=\=/g, '<span class="cm-custom-highlight cm-highlight">$1</span>'); //Highlights
+								.replace(/\=\=(?:{(.*?)})?(.+?)\=\=/g, (str:string, ...match)=>{
+									let [type, text] = match;
+									let hlClass = type? '' : ' cm-custom-highlight-'+type;
+									return `<span class="cm-custom-highlight cm-highlight${hlClass}">${text}</span>`
+								}) 
 							
 						}
 						//Extended

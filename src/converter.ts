@@ -161,6 +161,7 @@ export class MDConverter{
 			node.style.maxWidth= Platform.isMobile? settings.renderMaxwidthMobile
 					:settings.renderMaxwidth;
 			node.style.padding= "2em";
+
 			
 		
 			const blob = await domtoimage.toBlob(node,
