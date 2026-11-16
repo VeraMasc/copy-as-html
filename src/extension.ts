@@ -10,7 +10,6 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 				type: 'listener',
 				listeners: {
 					'hashBlock.before':function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
-						
 						// TODO: Fully implement rendering callouts
 
 						if(settings.experimental && /^<blockquote>\s*<p>\[!/.test(text)){
@@ -28,6 +27,19 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						
 						return text;
 					},
+					'anchors.before': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
+						//Match wikilinks
+						let matches = text.matchAll(/\[\[([^|\]#]*)(?:#([^\]\|]+))?(?:\|([^\]]+))?\]\]/gm)
+						for(let match of matches){
+							console.log(match)
+						}
+						return text;
+					},
+
+					// 'anchors.after': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
+
+					// 	return text;
+					// },
 					'italicsAndBold.before': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Cleanup
 						let {removeTags, obsidianSupport, removeEmphasis, removeBrackets} = settings;
