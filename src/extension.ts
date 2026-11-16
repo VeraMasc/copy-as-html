@@ -13,6 +13,11 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						// TODO: Fully implement rendering callouts
 
 						if(settings.experimental && /^<blockquote>\s*<p>\[!/.test(text)){
+							text.replace(/^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/, (str:string, ...matches)=>{
+								console.warn(str,matches)
+								return str;
+							})
+
 							let match = /^(<blockquote)(>\s*<p>)\[!([^\[\]]+)](?:(\s[^\n]+)(?:<\/p>)?)?/.exec(text)
 							// console.warn(text,match)
 							let type = match?.[3]
@@ -29,10 +34,22 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 					},
 					'anchors.before': function (event: string, text: string, converter: Converter, options: ShowdownOptions, globals: ConverterGlobals) {
 						//Match wikilinks
-						let matches = text.matchAll(/\[\[([^|\]#]*)(?:#([^\]\|]+))?(?:\|([^\]]+))?\]\]/gm)
-						for(let match of matches){
-							console.log(match)
-						}
+						text = text.replace(/\[\[([^|\]#]*)(?:#([^\]\|]+))?(?:\|([^\]]+))?\]\]/g, (str:string, ...matches)=>{
+							console.log(str, matches)
+							let path = encodeURI(matches[0]) + (matches[1]? '#'+ encodeURI(matches[1]):'');
+							console.warn(path)
+							let title = matches[2] ?? (
+								(matches[0] && matches[1])? 
+									matches[0]+'#'+matches[1]
+									:(matches[0] || matches[1] || '')
+							);
+							let ret = `[${title}](${path})`;
+							console.log(ret);
+							return ret;
+						})
+
+						// TODO: Fix links and wikilinks starting with "#"
+						
 						return text;
 					},
 
@@ -45,7 +62,7 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 						let {removeTags, obsidianSupport, removeEmphasis, removeBrackets} = settings;
 						text = text.replace(/\^\w+$/g, ''); //removing block reference ids
 						if (removeTags || obsidianSupport)
-							text = text.replace(/(#\w+)/g, removeTags ? '' : '<span class="tag">$1</span>');
+							text = text.replace(/((?<!\S)#\w+)/g, removeTags ? '' : '<a class="tag">$1</a>');
 						if (removeEmphasis) {
 							text = text.replace(/[*~]+(\w+)[*~]+/g, '$1');
 						}
@@ -75,6 +92,7 @@ export function  createExtension_(plugin:MarkdownToHTML) {
 							// TODO: add spoilers and other stuff
 							// TODO: Allow custom tag delimiters?
 							// TODO: support block styling
+							// TODO: Check for regex bugs
 						}
 						return text;
 					},
